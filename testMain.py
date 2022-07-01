@@ -1,11 +1,18 @@
-import string
+from moreEvilDevil import moreEvilDevil
 from devil import devil
 
-devil1 = devil("Kurt", "Hiking", "Red", 32, False)
-devil2 = devil("Dennis", "Tennis", "Pink", 22, False)
+myDevil = devil()
 
-devil3 = devil("Bob", "Hiking", "Blue", 12, True)
+myMoreEvilDevil = moreEvilDevil()
 
 
-print(devil1.age)
+
+myDevil.print_name()
+myDevil.print_is_busy_working()
+
+myMoreEvilDevil.print_screamRoar()
+myMoreEvilDevil.print_name()
+myMoreEvilDevil.print_is_busy_working()
+
+
 
