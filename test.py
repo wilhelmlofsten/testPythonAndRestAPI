@@ -2,9 +2,18 @@ import requests
 
 BASE = "http://127.0.0.1:5000/"
 
-#response = requests.put(BASE + "video/1", {"likes": 21, "name": "crazzyKoding", "views": 4200})
-#print(response.json())
+data = [{"likes": 72, "name": "Joe jokes", "views": 4200}, 
+{"likes": 21, "name": "crazzyKoding Montage", "views": 66600},
+ {"likes":  700000, "name": "how to reverse a linked list ", "views": 9292922} ]
 
-#input()
-response = requests.get(BASE + "video/6")
+for i in range(len(data)):
+    response = requests.put(BASE + "video/" + str(i), data[i])
+    print(response.json())
+
+input()
+response = requests.delete(BASE + "video/0")
+print(response)
+
+input()
+response = requests.get(BASE + "video/2")
 print(response.json())
