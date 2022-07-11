@@ -1,59 +1,68 @@
-from email import message
-from unicodedata import name # onödig??
+from ast import arg
 from flask import Flask
-from flask_restful import Api, Resource, reqparse, abort, fields, marshal_with
-from flask_sqlalchemy import SQLAlchemy
+from flask_restful import Resource, Api, reqparse, abort
+from pkg_resources import require
+import json
 
-app = Flask(__name__)
+app = Flask("VideoAPI")
 api = Api(app)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
-db = SQLAlchemy(app)
 
-class VideoModel(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    views = db.Column(db.Integer, nullable=False)
-    likes = db.Column(db.Integer, nullable=False)
+parser = reqparse.RequestParser()
+parser.add_argument('title', required=True)
+parser.add_argument('uploadDate', type=int, required=False)
 
-    def __repr__ (self):
-        return f"Video(name = {name}, views = {views}, likes = {likes})"
+with open('videos.json', 'r') as f:
+    videos = json.load(f)
 
+def write_changes_to_files(): #metod för att sortera filerna genom datum
+    global videos
+    videos = {k: v for k, v in sorted(videos.items(), key=lambda video: video[1]['uploadDate'])}
+    with open('videos.json', 'w') as f:
+        json.dump(videos, f)
 
-video_put_args = reqparse.RequestParser()
-video_put_args.add_argument("name", type=str, help="Name of the video is required", required=True)
-video_put_args.add_argument("views", type=int, help="Views of the video is required", required=True)
-video_put_args.add_argument("likes", type=int, help="Likes of the video is required", required=True)
-
-
-resource_fields = {
-    'id': fields.Integer,
-    'name': fields.String,
-    'views': fields.Integer,
-    'likes': fields.Integer
-}
 
 class Video(Resource):
-    @marshal_with(resource_fields)
+
     def get(self, video_id):
-        result = VideoModel.query.filter_by(id=video_id).first()
-        return result
+        if video_id == "all":
+            return videos
+        if video_id not in videos:
+            abort(404, message=f"Video {video_id} not found")
+        return videos[video_id]
     
-    @marshal_with(resource_fields)
-    def put(self,video_id):
-        args = video_put_args.parse_args()
-        result = VideoModel.query.filter_by(id=video_id).first()
-        if result:
-            abort(409, message="Video id is take..")
-        video = VideoModel(id=video_id, name=args['name'], views=args['views'], likes=args['likes'])
-        db.session.add(video)
-        db.session.commit()
-        return video, 201
+    def put(self, video_id):
+        args = parser.parse_args()
+        new_video = {'title': args['title'], 'uploadDate': args['uploadDate']}
+        videos[video_id] = new_video
+        write_changes_to_files()
+        return {video_id: videos[video_id]}, 201
+    
+    def delete(self, video_id):
+        if video_id not in videos:
+            abort(404, message=f"Video {video_id} not found")
+        del videos[video_id]
+        write_changes_to_files()
+        return "", 204
 
-   # def delete(self, video_id):
-        #del videos[video_id]
-       # return '', 204
+class VideoSchedule(Resource):
 
-api.add_resource(Video, "/video/<int:video_id>")
+    def get(self):
+        return videos
 
-if __name__ == "__main__":
-    app.run(debug=True)
+
+    def post(self):
+        args = parser.parse_args()
+        new_video = {'title': args['title'], 'uploadDate': args['uploadDate']}
+        video_id = max(int(v.lstrip('video')) for v in videos.keys()) + 1
+        video_id = f"video{video_id}"
+        videos[video_id] = new_video
+        write_changes_to_files()
+        return videos[video_id], 201
+
+
+api.add_resource(Video, '/videos/<video_id>')
+api.add_resource(VideoSchedule, '/videos')
+
+if __name__ == '__main__':
+    app.run()
+    #app.run(debug=True)
